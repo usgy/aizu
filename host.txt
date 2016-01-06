@@ -1,0 +1,9 @@
+- Solaris11:
+  - Computer Exercise Room 1 and 2  ... stdrsv1121 - stdrsv1125
+  - Computer Exercise Room 3 and 4  ... std34rsv1 - std34rsv5
+  - Hardware Workshop 1, 2, 3 and 4 ... stdrsv2121 - stdrsv2128
+  - CALL Lab 1 and 2                ... stdrsv3121 - stdrsv3123
+  - Faculty room                    ... prorsv1 - prorsv10
+- OS X 10.9
+  - Computer Exercise Room 5 and 6  ... std5dc2 - std5dc50, std6dc2 - std6dc50
+  - iLab 1 and 2                    ... ilab1dc2 - ilab1dc49, ilab2dc2 - ilab2dc49
