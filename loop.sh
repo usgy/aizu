@@ -1,17 +1,22 @@
 #!/bin/bash
-ARRAY=(stdrsv1121)
-echo -n "id: "
-read id
+ARRAY=(stdrsv1121 stdrsv1122)
 echo -n "Password: "
 read pass
 
 for item in ${ARRAY[@]}; do
     expect -c "
-    spawn ssh -l $id $item who
+    spawn ssh -l $USER $item who
     expect \"Please select one (cancel, once, *\" 
 	send \"once\n\"
-	expect \"Password*\"
+	expect -regexp \"Password*\"
 	send \"$pass\n\"
-	expect \"{s1220135}*\"
-	"
+	expect -regexp \"Authentication successful*\"
+	log_file log
+	spawn echo $HOST
+	expect \"{$USER}*\"
+	log_file
+	" 
 done
+
+cat log | awk '{ print $1 }' > log_awk.txt
+
