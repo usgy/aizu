@@ -1,0 +1,97 @@
+#! /usr/bin/ruby
+require 'net/ssh'
+require 'net/sftp'
+require 'io/console'
+require 'base64'
+
+Room = Struct.new(:name, :host)
+AIZU_PR_DIR = "~/.aizu-pr"
+TEMP_FILE_NAME = "temp"
+
+if(ARGV.size == 0)
+        puts "[Usage]: aizu-pr filename"
+        exit
+end
+
+file_paths = ARGV
+
+student_id = "s1220135"
+print "Password: "
+password = STDIN.noecho(&:gets)
+
+Net::SSH.start('sshgate.u-aizu.ac.jp', student_id, :password => password) do |ssh|
+    rooms = [
+        Room.new('std1', 'stdrsv1121'),
+        Room.new('std2', 'stdrsv1121'),
+        Room.new('std3', 'std34rsv5'),
+        Room.new('std4', 'std34rsv5'),
+        Room.new('std5', 'std5dc1'),
+        Room.new('std6', 'std6dc1'),
+        Room.new('ilab1', 'ilab1dc1'),
+        Room.new('ilab2', 'ilab2dc1'),
+        Room.new('call1', 'stdrsv3122'),
+        Room.new('call2', 'stdrsv3122'),
+        Room.new('hdw1', 'stdrsv2126'),
+        Room.new('hdw2', 'stdrsv2126'),
+    ]
+
+    puts rooms.map.with_index(1){|room, i| "#{i}: #{room.name}"}.join(", ")
+
+
+    print "room: "
+    room_num = $stdin.gets.to_i
+    room_name, host = rooms[room_num-1].name, rooms[room_num-1].host
+
+    print "pr: "
+    printer_num = $stdin.gets.to_i
+
+    print "n: "
+    paper_num = $stdin.gets.to_i
+
+    print %Q{Print "#{file_paths}" on "#{room_name}pr#{printer_num}" (y/n): }
+
+
+    if $stdin.gets.chomp == 'y'
+        printer_name = "#{room_name}pr#{printer_num}"
+
+        # 転送先のディレクトリを作成
+        ssh.exec!("mkdir #{AIZU_PR_DIR}")
+        # ファイルを転送
+        Net::SFTP.start('sshgate.u-aizu.ac.jp', student_id, :password => password) {|sftp|
+            file_paths.each_with_index{|file_path, idx|
+                sftp.upload!(file_path, "#{AIZU_PR_DIR}/#{TEMP_FILE_NAME}#{idx}")
+            }
+        }
+        
+        
+        paper_num.times{
+            channel = ssh.open_channel do |ch|
+                channel.request_pty do |ch, success|
+                    raise "Could not obtain pty " if !success
+                end
+
+                # lprコマンドの羅列
+                lpr_commands = file_paths.map.with_index{|_, idx|
+                    "lpr -P#{printer_name} #{AIZU_PR_DIR}/#{TEMP_FILE_NAME}#{idx}"
+                }.join(';')
+
+                channel.exec "ssh -oStrictHostKeyChecking=no #{host} '#{lpr_commands}; lpq -P#{printer_name}'" do |ch, success|
+                    ch.on_data do |c, data|
+                        if data =~ /[pP]assword/
+                            channel.send_data(password+"\r\n")
+                        else
+                            puts data
+                        end
+                    end
+                end
+            end
+        }
+
+        cmd = "rsh #{host} lpr -P#{printer_name} #{AIZU_PR_DIR}/#{TEMP_FILE_NAME} -\##{paper_num}"
+        puts cmd
+        # ssh.exec!(cmd)
+
+    end
+end
+
+
